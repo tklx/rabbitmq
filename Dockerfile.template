@@ -1,0 +1,26 @@
+# !include frombase
+# !include tini
+
+ARG NEED_USER='rabbitmq'
+ARG NEED_HOME='/var/lib/rabbitmq'
+
+# !include security
+
+# App-specific config
+RUN set -x \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends rabbitmq-server erlang-base-hipe \
+    && apt-clean --aggressive \
+    && echo '[ { rabbit, [ { loopback_users, [ ] } ] } ].' > /etc/rabbitmq/rabbitmq.config \
+    && chown -R ${NEED_USER}:${NEED_USER} /var/lib/rabbitmq /etc/rabbitmq
+
+USER rabbitmq
+
+VOLUME /var/lib/rabbitmq
+WORKDIR /var/lib/rabbitmq
+
+COPY entrypoint /
+ENTRYPOINT ["/tini", "--", "/entrypoint"]
+
+EXPOSE 4369 5671 5672 15671 15672 25672 
+CMD ["rabbitmq-server"]
