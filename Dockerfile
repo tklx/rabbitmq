@@ -59,7 +59,7 @@ RUN set -x \
     && apt-get install -y --no-install-recommends rabbitmq-server erlang-base-hipe \
     && apt-clean --aggressive \
     && echo '[ { rabbit, [ { loopback_users, [ ] } ] } ].' > /etc/rabbitmq/rabbitmq.config \
-    && chown -R ${NEED_USER}:${NEED_USER} /var/lib/rabbitmq /etc/rabbitmq
+    && chown -R rabbitmq:rabbitmq /var/lib/rabbitmq /var/log/rabbitmq /etc/rabbitmq
 
 USER rabbitmq
 
