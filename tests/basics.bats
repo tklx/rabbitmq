@@ -13,7 +13,7 @@ _in_cache "$IMAGE" || fatal "$IMAGE not in cache"
 
 rabbit_eval() {
     docker run --rm -i \
-        --link "$CNAME":$APPNAME \
+        --link "$CNAME" \
         -e RABBITMQ_ERLANG_COOKIE='test' \
         "$IMAGE" \
         "$@"
@@ -24,13 +24,13 @@ _init() {
 
     echo >&2 "init: running $IMAGE"
     export CNAME="$APPNAME-$RANDOM-$RANDOM"
-    export CID="$(docker run -d --name "$CNAME" --hostname "$APPNAME" -e RABBITMQ_ERLANG_COOKIE='test' "$IMAGE")"
+    export CID="$(docker run -d --name "$CNAME" --hostname "$CNAME" -e RABBITMQ_ERLANG_COOKIE='test' "$IMAGE")"
     [ "$CIRCLECI" = "true" ] || trap "docker rm -vf $CID > /dev/null" EXIT
 }
 [ -n "$TEST_SUITE_INITIALIZED" ] || _init
 
 @test "rabbitmq broker is running" {
-    rabbit_eval rabbitmqctl -q -n rabbit@"$APPNAME" status
+    rabbit_eval rabbitmqctl -q -n rabbit@"$CNAME" status
     [ $? -eq 0 ]
 }
 
