@@ -13,8 +13,9 @@ _in_cache "$IMAGE" || fatal "$IMAGE not in cache"
 
 rabbit_eval() {
     docker run --rm -i \
-        --link "$CNAME" \
+        --link "$CNAME":"$CNAME" \
         -e RABBITMQ_ERLANG_COOKIE='test' \
+        -e RABBITMQ_NODENAME="rabbit@$CNAME" \
         "$IMAGE" \
         "$@"
 }
@@ -26,11 +27,25 @@ _init() {
     export CNAME="$APPNAME-$RANDOM-$RANDOM"
     export CID="$(docker run -d --name "$CNAME" --hostname "$CNAME" -e RABBITMQ_ERLANG_COOKIE='test' "$IMAGE")"
     [ "$CIRCLECI" = "true" ] || trap "docker rm -vf $CID > /dev/null" EXIT
+
+    echo -n >&2 "init: waiting for $IMAGE to accept connections"
+    tries=10
+    while ! rabbit_eval rabbitmqctl -q status &> /dev/null; do
+        (( tries-- ))
+        if [ $tries -le 0 ]; then
+            echo >&2 "$IMAGE failed to accept connections in wait window!"
+            ( set -x && docker logs "$CID" ) >&2 || true
+            false
+        fi
+        echo >&2 -n .
+        sleep 2
+    done
+    echo
 }
 [ -n "$TEST_SUITE_INITIALIZED" ] || _init
 
 @test "rabbitmq broker is running" {
-    rabbit_eval rabbitmqctl -q -n rabbit@"$CNAME" status
+    rabbit_eval rabbitmqctl -q status
     [ $? -eq 0 ]
 }
 
